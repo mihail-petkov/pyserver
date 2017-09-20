@@ -6,19 +6,21 @@ from io import StringIO
 from http.request import Request
 from http.response import Response
 from config import Config
+from logger import Pylogger
 
 class WSGIPyServer:
     
     def __init__(self, application, port=8888, host='', log_level=logging.DEBUG):
         self.application = application
         self.config = Config(host, port)
-        self.log_level = log_level
+        Pylogger.init(log_level)
 
     def listen(self):
         self.server = socket.socket(self.config.address_family, self.config.socket_type)
         self.server.setsockopt(self.config.socket_level, self.config.socket_level_type, 1)
         self.server.bind((self.config.host, self.config.port))
         self.server.listen(self.config.request_queue_size)
+        Pylogger.logger.info('Serving HTTP on port %s ...' % self.config.port)
         while True:
             self.handle_request()
 
@@ -32,6 +34,7 @@ class WSGIPyServer:
 
     def parse_request(self):
         request_data = self.connection.recv(1024)
+        Pylogger.logger.debug(request_data)
         self.request = Request(request_data)
 
     def process_response(self):

@@ -1,3 +1,5 @@
+from logger import Pylogger
+
 class Response:
 
     HTTP_VERSION = 'HTTP/1.1'
@@ -6,6 +8,7 @@ class Response:
         self.status = status
         self.headers = headers
         self.body = body
+        self.logger = Pylogger.logger
 
     def get(self):
         response = '{http_version} {status}\r\n'.format(http_version=self.HTTP_VERSION, status=self.status)
@@ -14,5 +17,5 @@ class Response:
         response += '\r\n'
         for data in self.body:
             response += data
-        print(response)
+        Pylogger.logger.debug(response)
         return response.encode('utf-8')
