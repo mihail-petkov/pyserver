@@ -16,7 +16,7 @@ def load_application():
 def create_server():
     application = load_application()
     pyserver = WSGIPyServer(application)
-    pyserver.listen()
+    pyserver.run()
 
 if __name__ == '__main__':
     validate_params()

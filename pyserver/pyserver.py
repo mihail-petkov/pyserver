@@ -2,6 +2,8 @@ import socket
 import sys
 import logging
 import http.header as header        
+import os
+import signal
 from io import StringIO
 from http.request import Request
 from http.response import Response
@@ -15,18 +17,41 @@ class WSGIPyServer:
         self.config = Config(host, port)
         Pylogger.init(log_level)
 
+    def run(self):
+        self.listen()
+        Pylogger.logger.info('Serving HTTP on port %s ...' % self.config.port)
+        while True:
+            self.handle_request()
+
     def listen(self):
         self.server = socket.socket(self.config.address_family, self.config.socket_type)
         self.server.setsockopt(self.config.socket_level, self.config.socket_level_type, 1)
         self.server.bind((self.config.host, self.config.port))
         self.server.listen(self.config.request_queue_size)
-        Pylogger.logger.info('Serving HTTP on port %s ...' % self.config.port)
-        while True:
-            self.handle_request()
+        signal.signal(signal.SIGCHLD, self.wait_child_to_exit)
 
     def handle_request(self):
         self.connection, client_address = self.server.accept()
-        self.process_request()
+        self.handle_request_in_another_process()
+
+    def handle_request_in_another_process(self):
+        pid = os.fork()
+        if pid == 0:
+            self.server.close()
+            self.process_request()
+            self.connection.close()
+            os._exit(0)
+        else:
+            self.connection.close()
+
+    def wait_child_to_exit(self, signum, frame):
+        while True:
+            try:
+                pid, status = os.waitpid(-1, os.WNOHANG)
+            except OSError:
+                return
+            if pid == 0:
+                return
 
     def process_request(self):
         self.parse_request()
@@ -49,7 +74,6 @@ class WSGIPyServer:
     def finish_response(self, response_body):
         response = self.get_response(response_body)
         self.connection.sendall(response)
-        self.connection.close()
 
     def get_response(self, response_body):
         response = Response(self.status, self.headers, response_body)
