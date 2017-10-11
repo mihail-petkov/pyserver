@@ -14,10 +14,13 @@ def load_application():
     return app_handler
 
 def create_server():
+    validate_params()
     application = load_application()
+    run(application)
+
+def run(application):
     pyserver = WSGIPyServer(application)
     pyserver.run()
 
 if __name__ == '__main__':
-    validate_params()
     create_server()
